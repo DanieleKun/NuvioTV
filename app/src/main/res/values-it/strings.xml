@@ -2245,6 +2245,7 @@
 <string name="nav_discover">Scopri</string>
 <string name="nav_search">Cerca</string>
 <string name="nav_library">Libreria</string>
+<string name="nav_calendar">Calendario</string>
 <string name="nav_addons">Addon</string>
 <string name="nav_movies">Film</string>
 <string name="nav_series">Serie TV</string>
@@ -3166,5 +3167,27 @@
 <string name="stream_test_error_prefix">Errore: %1$s</string>
 <string name="stream_test_video_bitrate">Bitrate video medio: %1$s</string>
 <string name="stream_test_error_connection">Connessione fallita. Il link dell\'ultimo stream riprodotto potrebbe essere scaduto o non raggiungibile. Riproduci di nuovo il video e riprova.</string>
+
+<!-- Calendar (personal build) -->
+<string name="calendar_title">Calendario</string>
+<string name="calendar_subtitle_library">Dalla tua libreria</string>
+<string name="calendar_today">Oggi</string>
+<string name="calendar_tomorrow">Domani</string>
+<string name="calendar_yesterday">Ieri</string>
+<string name="calendar_jump_next_release">Vai alla prossima uscita</string>
+<string name="calendar_origin_watching">In visione</string>
+<string name="calendar_previous_month">Mese precedente</string>
+<string name="calendar_next_month">Mese successivo</string>
+<string name="calendar_loading_progress">Caricamento date di uscita… %1$d/%2$d</string>
+<string name="calendar_empty_library_title">La tua libreria è vuota</string>
+<string name="calendar_empty_library_subtitle">Salva film e serie per vedere qui le prossime uscite.</string>
+<string name="calendar_empty_day_title">Nessuna uscita in questo giorno</string>
+<string name="calendar_empty_day_subtitle">Spostati nel calendario per trovare la prossima uscita.</string>
+<string name="calendar_episode_label">S%1$dE%2$d</string>
+<string name="calendar_more_count">+%1$d</string>
+<plurals name="calendar_releases_count">
+    <item quantity="one">%1$d uscita</item>
+    <item quantity="other">%1$d uscite</item>
+</plurals>
 
 </resources>
