@@ -2,6 +2,11 @@ package com.nuvio.tv.core.di
 
 import com.nuvio.tv.data.repository.AddonRepositoryImpl
 import com.nuvio.tv.data.repository.CatalogRepositoryImpl
+import com.nuvio.tv.data.local.CalendarReleaseCache
+import com.nuvio.tv.data.local.CalendarReleaseCacheDataStore
+import com.nuvio.tv.data.repository.CalendarMovieReleaseKindsSource
+import com.nuvio.tv.data.repository.CalendarReleaseRepositoryImpl
+import com.nuvio.tv.data.repository.TmdbCalendarMovieReleaseKindsSource
 import com.nuvio.tv.data.repository.LibraryRepositoryImpl
 import com.nuvio.tv.data.repository.MetaRepositoryImpl
 import com.nuvio.tv.data.repository.StreamRepositoryImpl
@@ -10,6 +15,7 @@ import com.nuvio.tv.data.repository.SyncRepositoryImpl
 import com.nuvio.tv.data.repository.WatchProgressRepositoryImpl
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.CatalogRepository
+import com.nuvio.tv.domain.repository.CalendarReleaseRepository
 import com.nuvio.tv.domain.repository.LibraryRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.StreamRepository
@@ -41,6 +47,18 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindMetaRepository(impl: MetaRepositoryImpl): MetaRepository
+
+    @Binds
+    @Singleton
+    internal abstract fun bindCalendarReleaseRepository(impl: CalendarReleaseRepositoryImpl): CalendarReleaseRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindCalendarReleaseCache(impl: CalendarReleaseCacheDataStore): CalendarReleaseCache
+
+    @Binds
+    @Singleton
+    internal abstract fun bindCalendarMovieReleaseKindsSource(impl: TmdbCalendarMovieReleaseKindsSource): CalendarMovieReleaseKindsSource
 
     @Binds
     @Singleton

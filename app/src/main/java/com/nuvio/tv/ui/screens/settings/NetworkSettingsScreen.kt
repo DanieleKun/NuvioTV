@@ -81,6 +81,7 @@ import java.net.URL
 @dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
 private interface ClearCwCacheEntryPoint {
     fun cwEnrichmentCache(): com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache
+    fun calendarReleaseRepository(): com.nuvio.tv.domain.repository.CalendarReleaseRepository
 }
 
 @dagger.hilt.EntryPoint
@@ -749,6 +750,7 @@ fun AdvancedSettingsContent(
                                         ClearCwCacheEntryPoint::class.java
                                     )
                                 entryPoint.cwEnrichmentCache().clearAll()
+                                entryPoint.calendarReleaseRepository().clearCache()
                                 cleared = true
                             }
                         }

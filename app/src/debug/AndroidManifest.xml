@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Debug-only: seeds the library with real titles to stress-test the calendar resolver. -->
+        <receiver
+            android:name="com.nuvio.tv.debug.CalendarSeedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.nuvio.tv.debug.SEED_LIBRARY" />
+                <action android:name="com.nuvio.tv.debug.CLEAR_SEED" />
+                <action android:name="com.nuvio.tv.debug.CLEAR_CALENDAR_CACHE" />
+                <action android:name="com.nuvio.tv.debug.CLEAR_HTTP_CACHE" />
+                <action android:name="com.nuvio.tv.debug.SET_TMDB" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>

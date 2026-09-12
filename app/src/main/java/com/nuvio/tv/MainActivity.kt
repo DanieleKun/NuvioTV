@@ -158,6 +158,7 @@ import com.nuvio.tv.domain.model.resolveAppTheme
 import com.nuvio.tv.domain.model.resolveCustomThemeColors
 import com.nuvio.tv.domain.deeplink.AppDeepLink
 import com.nuvio.tv.domain.repository.AddonRepository
+import com.nuvio.tv.domain.repository.CalendarReleaseRepository
 import com.nuvio.tv.ui.components.NuvioScrollDefaults
 import com.nuvio.tv.ui.components.BrandWordmark
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
@@ -254,6 +255,9 @@ open class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var startupSyncService: StartupSyncService
+
+    @Inject
+    lateinit var calendarReleaseRepository: CalendarReleaseRepository
 
     @Inject
     lateinit var androidTvChannelSyncService: com.nuvio.tv.core.sync.androidtv.AndroidTvChannelSyncService
@@ -1135,6 +1139,7 @@ open class MainActivity : ComponentActivity() {
         externalPlaybackTracker.raiseAutoNextOverlayOnReturn()
         super.onStart()
         startupSyncService.startPeriodicSurfacePulls()
+        calendarReleaseRepository.startPeriodicRefresh()
         androidTvChannelSyncService.onForegroundChanged(true)
     }
 
@@ -1142,6 +1147,7 @@ open class MainActivity : ComponentActivity() {
         externalPlaybackTracker.onExternalPlayerCoveredApp()
         super.onStop()
         startupSyncService.stopPeriodicSurfacePulls()
+        calendarReleaseRepository.stopPeriodicRefresh()
         // App going to background (e.g. user returning to the launcher): reconcile the
         // Continue Watching channel once so Projectivy repaints it with fresh progress.
         androidTvChannelSyncService.onForegroundChanged(false)
