@@ -1,68 +1,74 @@
 package com.nuvio.tv.ui.screens.calendar
 
-import com.nuvio.tv.core.util.parseEpisodeReleaseLocalDate
-import com.nuvio.tv.domain.model.Meta
+import com.nuvio.tv.core.tracking.TrackingProviderId
+import com.nuvio.tv.domain.model.CalendarEventOrigin
+import com.nuvio.tv.domain.model.CalendarFilter
+import com.nuvio.tv.domain.model.CalendarReleaseEntry
+import com.nuvio.tv.domain.model.CalendarReleaseKind
+import com.nuvio.tv.domain.model.CalendarSource
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.ZoneId
 
 /** Weeks rendered by the month grid; six rows always cover any month for any first-day-of-week. */
 internal const val CALENDAR_WEEK_ROWS = 6
 internal const val DAYS_PER_WEEK = 7
 
 /**
- * Turns a calendar source plus its full [Meta] into calendar events.
+ * Turns a persisted [CalendarReleaseEntry] into the events shown for [source].
  *
- * - Series: one event per regular episode (season > 0) with a parseable release date.
- * - Movies, or series without dated episodes: a single event on [Meta.released] when it is a full
- *   date. Year-only values (e.g. "2024") cannot be placed on a day and produce no event.
+ * Title and poster come from the resolved meta when present, otherwise from the source; the
+ * origin caption always reflects the current source (a watched title can be saved later).
  */
-internal fun buildCalendarEvents(
-    source: CalendarSource,
-    meta: Meta,
-    zoneId: ZoneId = ZoneId.systemDefault()
-): List<CalendarEvent> {
-    val title = meta.name.ifBlank { source.name }
-    val poster = meta.poster ?: source.poster
-    val posterShape = meta.posterShape
-
-    val episodeEvents = meta.videos
-        .filter { video -> (video.season ?: 0) > 0 && video.episode != null }
-        .mapNotNull { video ->
-            val date = parseEpisodeReleaseLocalDate(video.released, zoneId) ?: return@mapNotNull null
-            CalendarEvent(
-                key = "${source.key}:${video.id}:${video.season}:${video.episode}",
-                itemId = source.id,
-                itemType = source.type,
-                addonBaseUrl = source.addonBaseUrl,
-                title = title,
-                poster = poster,
-                posterShape = posterShape,
-                date = date,
-                origin = source.origin,
-                season = video.season,
-                episode = video.episode,
-                episodeTitle = video.title.takeIf { it.isNotBlank() }
-            )
-        }
-    if (episodeEvents.isNotEmpty()) return episodeEvents
-
-    val releaseDate = parseEpisodeReleaseLocalDate(meta.released, zoneId) ?: return emptyList()
-    return listOf(
+internal fun buildCalendarEvents(source: CalendarSource, entry: CalendarReleaseEntry): List<CalendarEvent> {
+    val title = entry.title.ifBlank { source.name }
+    val poster = entry.poster ?: source.poster
+    return entry.releases.map { release ->
+        val isEpisode = release.season != null && release.episode != null
         CalendarEvent(
-            key = source.key,
+            key = when {
+                isEpisode -> "${source.key}:${release.videoId}:${release.season}:${release.episode}"
+                release.kind != null -> "${source.key}:${release.kind.name}"
+                else -> source.key
+            },
             itemId = source.id,
             itemType = source.type,
             addonBaseUrl = source.addonBaseUrl,
             title = title,
             poster = poster,
-            posterShape = posterShape,
-            date = releaseDate,
-            origin = source.origin
+            posterShape = entry.posterShape,
+            date = release.date,
+            origin = source.origin,
+            season = release.season,
+            episode = release.episode,
+            episodeTitle = release.episodeTitle,
+            kind = release.kind,
+            isAnime = source.isAnime || entry.isAnime,
+            libraryProviderId = source.libraryProviderId,
+            isWatching = source.isWatching
         )
-    )
+    }
 }
+
+/** Keeps only the events the user asked to see. */
+internal fun filterCalendarEvents(events: List<CalendarEvent>, filter: CalendarFilter): List<CalendarEvent> =
+    when (filter) {
+        CalendarFilter.ALL -> events
+        CalendarFilter.MOVIES -> events.filter { it.isMovie }
+        CalendarFilter.SERIES -> events.filter { !it.isMovie }
+        CalendarFilter.ANIME -> events.filter { it.isAnime }
+        CalendarFilter.WATCHING -> events.filter { it.isWatching }
+        CalendarFilter.LIBRARY_NUVIO -> events.filter {
+            it.origin == CalendarEventOrigin.LIBRARY && it.libraryProviderId == null
+        }
+        CalendarFilter.LIBRARY_TRAKT -> events.filter {
+            it.origin == CalendarEventOrigin.LIBRARY && it.libraryProviderId == TrackingProviderId.TRAKT.storageId
+        }
+        CalendarFilter.LIBRARY_SIMKL -> events.filter {
+            it.origin == CalendarEventOrigin.LIBRARY && it.libraryProviderId == TrackingProviderId.SIMKL.storageId
+        }
+        CalendarFilter.DIGITAL -> events.filter { it.kind == CalendarReleaseKind.DIGITAL }
+    }
 
 /** Groups events by day, sorted by date, then episode order, then title. */
 internal fun groupEventsByDate(events: Collection<CalendarEvent>): Map<LocalDate, List<CalendarEvent>> =
@@ -99,6 +105,21 @@ internal fun buildMonthGrid(
 /** Ordered weekday headers matching the grid columns. */
 internal fun weekdayOrder(firstDayOfWeek: DayOfWeek): List<DayOfWeek> =
     (0 until DAYS_PER_WEEK).map { firstDayOfWeek.plus(it.toLong()) }
+
+/**
+ * Day whose first release the agenda lands on for [selectedDate]: the selected day itself when it
+ * has releases, otherwise the next day with releases, otherwise the last one before it. Keeps the
+ * D-pad next to "today" on an empty day instead of jumping to the top of the month.
+ */
+internal fun agendaAnchorDate(releaseDays: List<LocalDate>, selectedDate: LocalDate): LocalDate? =
+    releaseDays.firstOrNull { !it.isBefore(selectedDate) } ?: releaseDays.lastOrNull()
+
+/**
+ * Days the agenda lists for [month]: every day with a release, plus today when it falls in the
+ * month and has nothing — an empty today still deserves its place in the timeline.
+ */
+internal fun agendaDays(releaseDays: List<LocalDate>, today: LocalDate, month: YearMonth): List<LocalDate> =
+    if (YearMonth.from(today) == month && today !in releaseDays) (releaseDays + today).sorted() else releaseDays
 
 /**
  * Picks the day to pre-select when [month] becomes visible: today if it falls in the month,

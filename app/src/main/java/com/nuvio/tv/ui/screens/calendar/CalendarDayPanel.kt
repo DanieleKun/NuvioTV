@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.calendar
 
 import androidx.compose.foundation.layout.Arrangement
+import com.nuvio.tv.domain.model.CalendarEventOrigin
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,7 +18,10 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -36,6 +40,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.components.FocusMarqueeText
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
@@ -231,10 +236,14 @@ private fun CalendarEventCard(
     leftFocusRequester: FocusRequester?
 ) {
     val preview = remember(event) { event.toMetaPreview() }
+    // The card owns focus; the captions below only need to know about it to marquee in sync.
+    var isFocused by remember { mutableStateOf(false) }
     Column(
-        modifier = Modifier.focusProperties {
-            if (leftFocusRequester != null) left = leftFocusRequester
-        }
+        modifier = Modifier
+            .focusProperties {
+                if (leftFocusRequester != null) left = leftFocusRequester
+            }
+            .onFocusChanged { isFocused = it.hasFocus }
     ) {
         GridContentCard(
             item = preview,
@@ -243,19 +252,13 @@ private fun CalendarEventCard(
             isWatched = isWatched,
             focusRequester = focusRequester
         )
-        val caption = buildList {
-            if (event.isEpisode) {
-                add(stringResource(R.string.calendar_episode_label, event.season ?: 0, event.episode ?: 0))
-                event.episodeTitle?.let(::add)
-            }
-        }.joinToString(" · ")
+        val caption = calendarEventCaption(event)
         if (caption.isNotBlank()) {
-            Text(
+            FocusMarqueeText(
                 text = caption,
+                focused = isFocused,
                 style = MaterialTheme.typography.labelSmall,
                 color = NuvioTheme.colors.TextTertiary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .width(PanelPosterStyle.width)
                     .padding(top = NuvioTheme.spacing.xxs)
