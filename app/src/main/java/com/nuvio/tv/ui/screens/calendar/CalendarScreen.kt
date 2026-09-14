@@ -26,6 +26,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,6 +57,8 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 import java.util.Locale
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.withFrameNanos
 
 private const val DAY_PANEL_WIDTH_FRACTION = 0.4f
 /** Lazy rows compose a few frames after a layout switch or cold start; keep asking a little longer. */
@@ -82,11 +85,19 @@ fun CalendarScreen(
         episode: Int?
     ) -> Unit
 ) {
+    // Corrects a stale selection the instant this screen (re-)composes — e.g. after the drawer's
+    // saveState cache kept this ViewModel alive across a real day rollover — *before* the first
+    // frame is built. Doing this here (composition), not in an effect, is what avoids the race:
+    // any post-commit effect runs after the first frame is already laid out with the stale
+    // selectedDate, so the always-fires-once "land focus" effect below would land on the stale
+    // day's cell and its onFocusChanged -> selectDate() would immediately stomp the correction.
+    remember(viewModel) { viewModel.refreshToday() }
     val uiState by viewModel.uiState.collectAsState()
     val locale = Locale.getDefault()
     val firstDayOfWeek = remember(locale) { WeekFields.of(locale).firstDayOfWeek }
     val selectedDayFocusRequester = remember { FocusRequester() }
     val panelFocusRequester = remember { FocusRequester() }
+    val scope = rememberCoroutineScope()
     val toolbarFocusRequester = remember { FocusRequester() }
     var isPanelFocused by remember { mutableStateOf(false) }
     var isScreenFocused by remember { mutableStateOf(false) }
@@ -104,9 +115,18 @@ fun CalendarScreen(
         onDispose { viewModel.onScreenVisibilityChanged(false) }
     }
 
-    // "Today" can change while the app sits in the background overnight.
+    // Covers the app sitting in the background overnight while already parked on this screen (the
+    // remember(viewModel) correction above only runs once, on this composable's initial mount).
+    // Unlike that mount-time case, there is no competing "land focus" effect racing to grab a
+    // stale cell here — this IS what triggers that effect, via the bump below — so the only race
+    // to guard is against the effect firing before recomposition has caught up with the jump;
+    // the frame wait covers that.
     LifecycleResumeEffect(Unit) {
-        viewModel.refreshToday()
+        scope.launch {
+            viewModel.refreshToday()
+            withFrameNanos { }
+            dayFocusRequestId++
+        }
         onPauseOrDispose { }
     }
 

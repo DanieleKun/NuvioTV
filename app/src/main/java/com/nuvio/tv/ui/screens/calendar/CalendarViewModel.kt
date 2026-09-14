@@ -123,11 +123,22 @@ class CalendarViewModel @Inject constructor(
         }
     }
 
-    /** Re-reads the system date (e.g. after the app resumed the next morning) without moving the selection. */
+    /**
+     * Re-reads the system date and, when it has actually advanced since the last check, jumps the
+     * visible month and selection to the new today. A same-day recheck (e.g. re-entering the
+     * screen after a Detail push/pop, or after the drawer restores this destination unchanged) is
+     * a no-op, so exploring a future day mid-session is never disturbed — only a real day rollover
+     * resets it. This is also what fixes the ViewModel surviving for days in the drawer's
+     * save/restoreState cache with a stale selection from whenever it was first created.
+     */
     fun refreshToday() {
         val today = LocalDate.now()
         _uiState.update { current ->
-            if (current.today == today) current else current.copy(today = today)
+            if (current.today == today) {
+                current
+            } else {
+                current.copy(today = today, visibleMonth = YearMonth.from(today), selectedDate = today)
+            }
         }
     }
 
